@@ -43,11 +43,6 @@ FISH_PRIME_DELAY = 2.0          # Cooldown before checking for ❗
 BANG_SEARCH_WINDOW = 9.0        # How long to look for❗
 BANG_SEARCH_INTERVAL = 0.02     # Checks ~50 times per second for the ❗
 
-# Try only high confidences & never click below this
-BANG_CONFIDENCES = (0.96, 0.94, 0.92, 0.90, 0.88, 0.86)
-BANG_MIN_ACCEPT_CONF = 0.70
-BANG_SCALES = (1.00, 0.93, 1.07)
-
 DEBUG_BANG_FRAMES = True
 
 # Color guard for the red ❗ (must be REALLY red)
