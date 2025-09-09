@@ -41,35 +41,31 @@ FISH_PRIME_DELAY = 2.0          # Cooldown before checking for ❗
 BANG_SEARCH_WINDOW = 9.0        # How long to look for❗
 BANG_SEARCH_INTERVAL = 0.02     # Checks ~50 times per second for the ❗
 
-# Color guard for the red ❗ (must be REALLY red)
 RED_R_MIN = 210
 RED_G_MAX = 80
 RED_B_MAX = 80
-RED_DOMINANCE = 70           # R - max(G,B) >= this
-COLOR_SCAN_STEP = 1          # fine scan around the candidate
+RED_DOMINANCE = 70
 
-# Debounce: require same spot for N frames within tolerance
+# Requires same spot for N frames to register
 BANG_DEBOUNCE_FRAMES = 1
+# Determines how big a spotted area is
 BANG_DEBOUNCE_TOLERANCE = 12
 
 START_WITH_FISH = True
+# Prints the Raw and Bin OCR
 DEBUG_OCR = True
-SAVE_DEBUG_SHOTS = False
 
 # Blue button detection (HSV)
-BLUE_HSV_LOW  = (100, 90, 120)   # H≈200–230°, fairly saturated blue
+BLUE_HSV_LOW  = (100, 90, 120)
 BLUE_HSV_HIGH = (135, 255, 255)
 
-# Geometry/area gates for blue tiles (auto scales with region size)
-MIN_BLUE_AREA_RATIO = 0.004   # ≥ 0.4% of buttons_region
-MAX_BLUE_TILES      = 8       # examine up to this many largest blue rectangles
+# Only check plausible blue spots
+MIN_BLUE_AREA_RATIO = 0.004   # at least 0.4% of buttons_region.png
+MAX_BLUE_TILES      = 8       # Only check the largest number of blobs
 
 # Red score we require inside the button's center (7x7 patch)
 RED_SCORE_THRESHOLD = 7
 
-# Debug image dumps (set True if you want PNGs of frames/masks)
-DEBUG_DUMP_BANG_FRAMES = False
-# ----------------------------
 
 def _blue_present_quick(buttons_region: Tuple[int,int,int,int]) -> bool:
     left, top, w, h = buttons_region
