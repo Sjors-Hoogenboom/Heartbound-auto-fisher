@@ -118,34 +118,36 @@ def _preprocess_raw(img: PILImage.Image) -> PILImage.Image:
 def read_chat_text(region: Tuple[int, int, int, int]) -> Tuple[str, str, PILImage.Image, PILImage.Image]:
     raw = pyautogui.screenshot(region=region)
     raw_up = _preprocess_raw(raw.copy())
-    binimg = _preprocess_binarized(raw.copy())
+    binary_img = _preprocess_binarized(raw.copy())
     cfg = f"--oem 3 --psm {PSM}"
     raw_txt = pytesseract.image_to_string(raw_up, config=cfg).lower()
-    bin_txt = pytesseract.image_to_string(binimg, config=cfg).lower()
-    return raw_txt, bin_txt, raw_up, binimg
+    binary_txt = pytesseract.image_to_string(binary_img, config=cfg).lower()
+    return raw_txt, binary_txt, raw_up, binary_img
 
 def calibrate_region_with_mouse(prompt_name: str) -> Tuple[int,int,int,int]:
     print(f"\nCalibrating {prompt_name} region:")
     print("1) Hover your mouse over the TOP-LEFT of the area")
     for s in [3,2,1]:
         print(f"   capturing in {s}…"); time.sleep(1)
-    tl = pyautogui.position()
-    print(f"   top-left = ({tl.x}, {tl.y})")
+    top_left = pyautogui.position()
+    print(f"   top-left = ({top_left.x}, {top_left.y})")
 
     print("2) Hover your mouse over the BOTTOM-RIGHT of the area")
     for s in [3,2,1]:
         print(f"   capturing in {s}…"); time.sleep(1)
-    br = pyautogui.position()
-    print(f"   bottom-right = ({br.x}, {br.y})")
+    bottom_right = pyautogui.position()
+    print(f"   bottom-right = ({bottom_right.x}, {bottom_right.y})")
 
-    left, top = min(tl.x, br.x), min(tl.y, br.y)
-    width, height = abs(br.x - tl.x), abs(br.y - tl.y)
-    region = (left, top, width, height)
+    left = int(min(top_left.x, bottom_right.x))
+    top = int(min(top_left.y, bottom_right.y))
+    width = int(abs(bottom_right.x - top_left.x))
+    height = int(abs(bottom_right.y - top_left.y))
+    region: Tuple[int, int, int, int] = (left, top, width, height)
     print(f"→ Calibrated {prompt_name} = {region}")
 
     test = pyautogui.screenshot(region=region)
     test.save(f"{prompt_name.replace(' ','_')}.png")
-    print(f"Saved {prompt_name.replace(' ','_')}.png — check the crop.")
+    print(f"Saved {prompt_name.replace(' ','_')}.png, check the crop.")
     return region
 
 def bottom_tail(region: Tuple[int,int,int,int], tail_h: int) -> Tuple[int,int,int,int]:
@@ -179,7 +181,6 @@ def _last_trigger_line_key(raw_txt: str, bin_txt: str) -> Optional[str]:
     best = cand_raw if (cand_raw and (not cand_bin or len(cand_raw) >= len(cand_bin))) else cand_bin
     return _normalize_line(best) if best else None
 
-# ---------- ❗ helpers ----------
 def _safely_locate(template_path, region, confidence):
     try:
         return pyautogui.locateOnScreen(template_path, region=region, confidence=confidence)
@@ -206,7 +207,6 @@ def _find_blue_tiles(frame_bgr: np.ndarray, region_area: int):
     """Return list of bounding rects (x,y,w,h) for blue button tiles, largest first."""
     hsv = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, BLUE_HSV_LOW, BLUE_HSV_HIGH)
-    # clean small speckles / close small gaps
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3,3), np.uint8), iterations=1)
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((5,5), np.uint8), iterations=1)
 
