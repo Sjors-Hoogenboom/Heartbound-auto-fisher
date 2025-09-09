@@ -8,8 +8,6 @@ from PIL import Image as PILImage, ImageOps, ImageFilter
 import cv2
 import numpy as np
 
-
-# ---------- CONFIG ----------
 MESSAGE = "/fish"
 
 # Amount of time before each snapshot
@@ -42,8 +40,6 @@ BANG_TEMPLATE = "bang_template.png"     # Image to look for
 FISH_PRIME_DELAY = 2.0          # Cooldown before checking for ❗
 BANG_SEARCH_WINDOW = 9.0        # How long to look for❗
 BANG_SEARCH_INTERVAL = 0.02     # Checks ~50 times per second for the ❗
-
-DEBUG_BANG_FRAMES = True
 
 # Color guard for the red ❗ (must be REALLY red)
 RED_R_MIN = 210
@@ -255,11 +251,6 @@ def watch_and_click_bang(buttons_region: Tuple[int,int,int,int], window_s: float
         tiles, blue_mask = _find_blue_tiles(frame, region_area)
         attempts += 1
 
-        if DEBUG_BANG_FRAMES and attempts % 10 == 0:
-            # occasional debug dump
-            cv2.imwrite(f"bang_frame_{attempts}.png", frame)
-            cv2.imwrite(f"bang_blue_mask_{attempts}.png", blue_mask)
-
         if not tiles:
             # nothing blue this frame
             last_center = None
@@ -277,8 +268,6 @@ def watch_and_click_bang(buttons_region: Tuple[int,int,int,int], window_s: float
                 best = (score, cx, cy, (x,y,ww,hh))
 
         score, cx, cy, rect = best
-        if DEBUG_BANG_FRAMES and attempts % 10 == 0:
-            print(f"[bang] tiles={len(tiles)} best_red={score} center=({cx},{cy})")
 
         # Require a little red at the center
         if score >= RED_SCORE_THRESHOLD:
