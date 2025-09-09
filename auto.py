@@ -7,6 +7,7 @@ import pytesseract
 from PIL import Image as PILImage, ImageOps, ImageFilter
 import cv2
 import numpy as np
+from PIL.Image import Resampling
 
 MESSAGE = "/fish"
 
@@ -74,10 +75,13 @@ def _blue_present_quick(buttons_region: Tuple[int,int,int,int]) -> bool:
     shot  = pyautogui.screenshot(region=buttons_region)
     frame = cv2.cvtColor(np.array(shot), cv2.COLOR_RGB2BGR)
     hsv   = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    mask  = cv2.inRange(hsv, BLUE_HSV_LOW, BLUE_HSV_HIGH)
-    # ratio of blue pixels in region
+    mask = cv2.inRange(
+        hsv,
+        np.array(BLUE_HSV_LOW, dtype=np.uint8),
+        np.array(BLUE_HSV_HIGH, dtype=np.uint8),
+    )
     blue_ratio = float((mask > 0).sum()) / float(max(1, w*h))
-    return blue_ratio > 0.01   # ~1% of region looks blue → likely buttons showing
+    return blue_ratio > 0.01   # ~1% of a region looks blue → likely buttons showing
 
 def _ensure_tesseract():
     if PYTESSERACT_CMD and os.path.exists(PYTESSERACT_CMD):
@@ -98,17 +102,17 @@ def send_message(msg: str):
 def _preprocess_binarized(img: PILImage.Image) -> PILImage.Image:
     if UPSCALE and UPSCALE != 1.0:
         w, h = img.size
-        img = img.resize((int(w * UPSCALE), int(h * UPSCALE)), resample=PILImage.LANCZOS)
-    g = img.convert("L")
-    g = ImageOps.autocontrast(g, cutoff=1)
-    g = g.point(lambda p: 255 if p > BINARIZE_THRESHOLD else 0)
-    g = g.filter(ImageFilter.SHARPEN)
-    return g
+        img = img.resize((int(w * UPSCALE), int(h * UPSCALE)), resample=Resampling.LANCZOS)
+    gray_img = img.convert("L")
+    gray_img = ImageOps.autocontrast(gray_img, cutoff=1)
+    binary_img = gray_img.point(lambda p: 255 if p > BINARIZE_THRESHOLD else 0)
+    binary_img = binary_img.filter(ImageFilter.SHARPEN)
+    return binary_img
 
 def _preprocess_raw(img: PILImage.Image) -> PILImage.Image:
     if UPSCALE and UPSCALE != 1.0:
         w, h = img.size
-        img = img.resize((int(w * UPSCALE), int(h * UPSCALE)), resample=PILImage.LANCZOS)
+        img = img.resize((int(w * UPSCALE), int(h * UPSCALE)), resample=Resampling.LANCZOS)
     return img
 
 def read_chat_text(region: Tuple[int, int, int, int]) -> Tuple[str, str, PILImage.Image, PILImage.Image]:
