@@ -188,7 +188,6 @@ def _safely_locate(template_path, region, confidence):
         return None
 
 def _red_score_at(x, y, patch=7) -> int:
-    """Count 'very red' pixels in a small square around (x,y)."""
     half = patch // 2
     left = max(0, x - half)
     top  = max(0, y - half)
@@ -204,7 +203,6 @@ def _red_score_at(x, y, patch=7) -> int:
     return score
 
 def _find_blue_tiles(frame_bgr: np.ndarray, region_area: int):
-    """Return list of bounding rects (x,y,w,h) for blue button tiles, largest first."""
     hsv = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, BLUE_HSV_LOW, BLUE_HSV_HIGH)
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3,3), np.uint8), iterations=1)
@@ -219,23 +217,13 @@ def _find_blue_tiles(frame_bgr: np.ndarray, region_area: int):
     for c in cnts:
         x,y,w,h = cv2.boundingRect(c)
         area = w*h
-        # heuristics: big enough, roughly rectangular tile (w>>h or ~square),
-        # ignore ultra-thin ribbons
         if area >= min_area and w >= 30 and h >= 25:
             tiles.append((x,y,w,h))
-    # largest first
     tiles.sort(key=lambda r: r[2]*r[3], reverse=True)
     return tiles[:MAX_BLUE_TILES], mask
 
 
 def watch_and_click_bang(buttons_region: Tuple[int,int,int,int], window_s: float) -> bool:
-    """
-    Every frame:
-      1) fresh screenshot of buttons_region
-      2) find blue tiles
-      3) score each tile's center for 'redness'
-      4) debounce the best center across frames, then click
-    """
     left, top, w, h = buttons_region
     region_area = max(1, w*h)
 
@@ -252,13 +240,11 @@ def watch_and_click_bang(buttons_region: Tuple[int,int,int,int], window_s: float
         attempts += 1
 
         if not tiles:
-            # nothing blue this frame
             last_center = None
             stable_frames = 0
             time.sleep(BANG_SEARCH_INTERVAL)
             continue
 
-        # Pick the tile whose center has the strongest red score
         best = None  # (score, cx, cy, rect)
         for (x,y,ww,hh) in tiles:
             cx = left + x + ww//2
@@ -269,9 +255,7 @@ def watch_and_click_bang(buttons_region: Tuple[int,int,int,int], window_s: float
 
         score, cx, cy, rect = best
 
-        # Require a little red at the center
         if score >= RED_SCORE_THRESHOLD:
-            # Debounce: same spot across frames
             if last_center and abs(cx - last_center[0]) <= BANG_DEBOUNCE_TOLERANCE and abs(cy - last_center[1]) <= BANG_DEBOUNCE_TOLERANCE:
                 stable_frames += 1
             else:
@@ -283,7 +267,6 @@ def watch_and_click_bang(buttons_region: Tuple[int,int,int,int], window_s: float
                 print(f"Clicked ❗ (blue→red method) at ({cx},{cy}) score={score} after {attempts} frames")
                 return True
         else:
-            # center not red enough yet; keep hunting
             last_center = None
             stable_frames = 0
 
@@ -292,7 +275,7 @@ def watch_and_click_bang(buttons_region: Tuple[int,int,int,int], window_s: float
     print("❗ not found within window")
     return False
 
-_BANG_TPL = None  # cv2 grayscale template (loaded in main)
+_BANG_TPL = None
 
 def _load_bang_template() -> Optional[np.ndarray]:
     if not os.path.exists(BANG_TEMPLATE):
@@ -316,7 +299,6 @@ def main():
     print("You have 3 seconds to focus the game/chat window…")
     time.sleep(3)
 
-    # hunt window
     hunt_start_ts: Optional[float] = None
     hunt_until_ts: Optional[float] = None
 
@@ -337,38 +319,31 @@ def main():
         while True:
             now = time.time()
 
-            # --- OCR the chat tail ---
             raw_txt, bin_txt, raw_img, bin_img = read_chat_text(chat_region)
 
             if DEBUG_OCR:
                 print("RAW OCR:", repr(raw_txt.strip()[:220]))
                 print("BIN OCR:", repr(bin_txt.strip()[:220]))
 
-            # 1) open/extend hunt on normal hint
             if any(h in raw_txt or h in bin_txt for h in BANG_TEXT_HINTS):
                 hunt_start_ts = now
                 hunt_until_ts = now + BANG_SEARCH_WINDOW
                 print(f"Hint detected → hunting ❗ for {BANG_SEARCH_WINDOW}s")
 
-            # 2) also open/extend hunt on retry text (your bug case)
             if any(h in raw_txt or h in bin_txt for h in BANG_RETRY_HINTS):
                 hunt_start_ts = now
                 hunt_until_ts = now + BANG_SEARCH_WINDOW
                 print(f"Retry text detected → hunting ❗ for {BANG_SEARCH_WINDOW}s")
 
-            # 3) if we can *see* blue buttons, keep the hunt alive even if OCR missed text
             if hunt_start_ts is not None and (hunt_until_ts is None or now <= hunt_until_ts):
                 if _blue_present_quick(buttons_region):
-                    # push the window forward a bit so it stays open while blue is visible
                     hunt_start_ts = min(hunt_start_ts or now, now)
                     hunt_until_ts = max(hunt_until_ts or now, now + HUNT_EXTEND_IF_BLUE_S)
 
-            # 4) while the hunt window is open, do short high-FPS slices
             if hunt_start_ts is not None and hunt_until_ts is not None and hunt_start_ts <= now <= hunt_until_ts:
                 print("[bang] scanning slice…")
                 watch_and_click_bang(buttons_region, 0.4)
 
-            # 5) send /fish on result lines
             occurrences = count_triggers(raw_txt, bin_txt)
             key = _last_trigger_line_key(raw_txt, bin_txt)
 
@@ -385,7 +360,6 @@ def main():
                 print(f"Detected RESULT via {dbg_reason} → sending {MESSAGE!r}")
                 send_message(MESSAGE)
 
-                # re-arm next hunt relative to this cast (time-based, robust even if hint OCR fails)
                 now = time.time()
                 hunt_start_ts = now + FISH_PRIME_DELAY
                 hunt_until_ts = hunt_start_ts + BANG_SEARCH_WINDOW
