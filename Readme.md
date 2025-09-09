@@ -13,5 +13,11 @@ After a /fish there's a delay (set to 15 seconds by default), after that delay i
 # How to use:
 
 You'll need tesseract for python, for windows it can be downloaded from the github page: https://github.com/UB-Mannheim/tesseract/wiki
+And might have to install some libraries (that your IDE will probably point out)
 
 You'll need an IDE like pycharm or Visual Studio to run the code
+
+You need to change the settings based on the colors that the ❗ has and its surrounding color (for example, mine is light-blue)
+Insert a bang_template.png that is a screenshot of how the buttons look on discord
+
+If all is running well, then you first need to calibrate, click the chat box and afk away
